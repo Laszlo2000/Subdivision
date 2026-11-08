@@ -1,5 +1,7 @@
 import os
 import pyvista as pv
+from algorithms.loop import loop_subdivision
+import numpy as np
 
 
 class MeshViewer:
@@ -49,9 +51,33 @@ class MeshViewer:
         print(f"Megjelenítés mód: {'Wireframe' if self.is_wireframe else 'Flat Surface'}")
 
     def step_subdivision(self):
-        """Helyőrző az újabb iteráció indítására billentyűre."""
+        """Újabb Loop subdivision iteráció futtatása a Space leütésekor."""
         self.iteration += 1
-        print(f"Iteráció kiváltva (Space lenyomva) -> Lépés: {self.iteration}")
+        print(f"--- Loop Iteráció #{self.iteration} indul ---")
+
+        # 1. Pontok és lapok kinyerése a PyVista hálóból
+        # A PyVista a lapokat [3, id1, id2, id3, 3, id4, ...] formában tárolja (VTK padding)
+        # Ebből tiszta (M, 3) tömböt csinálunk:
+        raw_faces = self.mesh.faces.reshape(-1, 4)[:, 1:4]
+        verts = self.mesh.points
+
+        # 2. Loop felosztás futtatása
+        new_verts, new_faces = loop_subdivision(verts, raw_faces)
+
+        # 3. Visszaalakítás PyVista PolyData formátumra
+        padding = np.full((len(new_faces), 1), 3, dtype=np.int64)
+        pv_faces = np.hstack((padding, new_faces)).ravel()
+
+        # 4. Megjelenítés frissítése a Plotterben
+        self.mesh = pv.PolyData(new_verts, pv_faces)
+        self.plotter.clear_actors()
+        self.actor = self.plotter.add_mesh(
+            self.mesh,
+            color='lightgray',
+            style='wireframe' if self.is_wireframe else 'surface'
+        )
+        self.plotter.render()
+        print(f"Befejezve: {len(new_verts)} csúcs, {len(new_faces)} lap.")
 
     def run(self):
         self.plotter.show()
@@ -59,7 +85,7 @@ class MeshViewer:
 
 if __name__ == '__main__':
     # Elérési út feloldása a projekt gyökeréhez képest
-    model_path = os.path.join(os.path.dirname(__file__), 'assets', 'cup.obj')
+    model_path = os.path.join(os.path.dirname(__file__), 'assets', 'cow.obj')
 
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"A modellfájl nem található ezen az útvonalon: {model_path}")
