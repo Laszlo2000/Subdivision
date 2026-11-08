@@ -21,7 +21,7 @@ class MeshViewer:
             raise FileNotFoundError(f"Nem található .obj fájl ebben a könyvtárban: {self.assets_dir}")
 
         # Plotter létrehozása
-        self.plotter = pv.Plotter(window_size=[1080, 720])
+        self.plotter = pv.Plotter(window_size=[1920, 1080])
         self.plotter.set_background('#1e1e1e')
         self.actor = None
         self.mesh = None
